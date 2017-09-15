@@ -11,7 +11,7 @@ scikit-learn 0.18.2 (or newer version)
 
 #### OPS
 For using OPS with specific informative vector ('corr','reg' or 'prod'), arguments must be passed in the format:
-main_crossVal.py <predictors_path> <target_path> <output_name> <correlation_threshold> <maxNumLatentVariables_OPS> <maxNumLatentVariables_model> <maxNumSelectedFeatures> <informativeVector>
+main_crossVal.py *<predictors_path> <target_path> <output_name> <correlation_threshold> <maxNumLatentVariables_OPS> <maxNumLatentVariables_model> <maxNumSelectedFeatures> <informativeVector>*
 Example:
 ```bash
     $ python main_crossVal.py X.txt Y.txt outputName 0.3 10 3 5 corr
@@ -20,7 +20,7 @@ Example:
 #### OPS automatized
 
 For using OPS implementation with automatic choice of informative vector (it runs slowly than using specific vector), arguments must be passed in the format:
-main_crossVal.py <predictors_path> <target_path> <output_name> <correlation_threshold> <maxNumLatentVariables_OPS> <maxNumLatentVariables_model> <maxNumSelectedFeatures>
+main_crossVal.py *<predictors_path> <target_path> <output_name> <correlation_threshold> <maxNumLatentVariables_OPS> <maxNumLatentVariables_model> <maxNumSelectedFeatures>*
 Example:
 ```bash
     $ python main_crossVal.py X.txt Y.txt outputName 0.3 10 3 5
@@ -38,9 +38,10 @@ Example:
 
 ### Output File
 The output of the program is written in two comma-separated files:
-'<output_name>_metrics.txt' contains the metrics about the best model found in OPS in the format: 'Q^2, R^2, RMSECV, RMSE, CORRCV, CORRMDL, numSelectedVariables, numLatentVariablesModel, numLatentVariablesOPS'
 
-'<output_name>_selectedFeatures.txt' contains the indexes of selected predictors in matrix '<predictors_path>' passed as argument.
+'*<output_name>*_metrics.txt' contains the metrics about the best model found in OPS in the format: *'Q², R², RMSECV, RMSE, CORRCV, CORRMDL, numSelectedVariables, numLatentVariablesModel, numLatentVariablesOPS'*
+
+'*<output_name>*_selectedFeatures.txt' contains the indexes of selected predictors in matrix '<predictors_path>' passed as argument.
  
 ### References
 [1] Teófilo, R. F.; Martins, J. P. A. & Ferreira, M. M. C. (2009). Sorting variables by using informative vectors as a strategy for feature selection in multivariate regression. Journal of Chemometrics, 23(1):32--48. ISSN 0886-9383
