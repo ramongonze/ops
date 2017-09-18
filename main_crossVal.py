@@ -65,11 +65,11 @@ X = X[:, subset]
 print('Processed dataset shape:', X.shape)
 if len(sys.argv) > 8:
     sel, q2, NV, NVL_Model, NVL_OPS = OPS(X, Y, maxVL_OPS, maxVL_Model, maxVariables, infoVec=nameInfoVec, verbose=1)
-    q2, r2, rmsecv, rmse, corrcv, corrmdl = cv.plsLOO(X, Y, int(NVL_Model))
+    q2, r2, rmsecv, rmse, corrcv, corrmdl = cv.plsLOO(X[:,sel], Y, int(NVL_Model))
     output = np.array([q2, r2, rmsecv, rmse, corrcv, corrmdl,int(NV), int(NVL_Model), int(NVL_OPS)]) 
 else:
     sel, q2, NV, NVL_Model, NVL_OPS, infoVec = OPS_auto(X, Y, maxVL_OPS, maxVL_Model, maxVariables, verbose=1)
-    q2, r2, rmsecv, rmse, corrcv, corrmdl = cv.plsLOO(X, Y, int(NVL_Model))
+    q2, r2, rmsecv, rmse, corrcv, corrmdl = cv.plsLOO(X[:,sel], Y, int(NVL_Model))
     output = np.array([q2, r2, rmsecv, rmse, corrcv, corrmdl, int(NV), int(NVL_Model), int(NVL_OPS), int(infoVec)])
 
 output = np.reshape(output, (1, -1))
