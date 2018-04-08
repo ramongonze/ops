@@ -62,9 +62,9 @@ For using OPS implementation in the parallelized version, the arguments must be 
 
 *Possible values for nameInfoVec: 'corr', 'reg' or 'prod', corresponding respectively to  correlation, regression and product vectors. If you want to run the OPS automatized (for all the informative vectors), let nameInfoVec=' '*
 
-**verbose**=1
+**verbose**=*<1_or_0>*
 
-*Let verbose=1 if you want to show the progress or verbose=0 otherwise*
+*Let verbose=1 if you want to show the progress or verbose=0 otherwise.*
 
 **servers**='*<number_of_cores>/<host_name>*'
 
