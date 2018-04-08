@@ -75,6 +75,12 @@ To add more hosts, write each host name separating with a comma. For example: se
 
 *maxProcess is the max number of process running in parallel*
 
+To use this version, just run:
+
+```bash
+    $ ./run.sh
+```
+
 
 #### Using in other Applications
 
