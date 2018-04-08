@@ -66,7 +66,7 @@ def sortVariables(X, Y, informativeVector):
     return X, mapping
 
 
-def OPS(X, Y, maxVL_OPS, maxVL_Model, maxVariables, infoVec='prod', verbose=0):
+def OPS(X, Y, NVL_OPS, maxVL_Model, maxVariables, infoVec='prod', verbose=0):
 
     """
     Ordered Predictors Selection (OPS): feature selection algorithm for multivariate regression.
@@ -78,7 +78,7 @@ def OPS(X, Y, maxVL_OPS, maxVL_Model, maxVariables, infoVec='prod', verbose=0):
         Samples.
     Y : numpy array of shape [n_samples]
         Target values.
-    maxVL_OPS: integer
+    NVL_OPS: integer
         Maximum number of latent variables tested in OPS for sorting varables (when using 'prod' or 'reg' infoVec).
     maxVL_Model: integer
         Maximum number of latent variables tested in PLS models with each feature subset.
@@ -129,52 +129,43 @@ def OPS(X, Y, maxVL_OPS, maxVL_Model, maxVariables, infoVec='prod', verbose=0):
     selFeats = {}
     key_features = 1
 
+    iterResults = np.empty([0, 5])
+    iterSelFeats = {}
+
     if infoVec == 'corr':
-        maxVL_OPS = 1
+        corrVec = correlationVector(X, Y)
+        informativeVector = formatInfoVec(corrVec, nFeatures)
+    elif infoVec == 'reg':
+        regVec = regressionVector(X, Y, NVL_OPS)
+        informativeVector = formatInfoVec(regVec, nFeatures)
+    else:
+        corrVec = correlationVector(X, Y)
+        regVec = regressionVector(X, Y, NVL_OPS)
+        prodVec = regVec * corrVec
+        informativeVector = formatInfoVec(prodVec, nFeatures)
 
-    for NVL_OPS in range(1, maxVL_OPS + 1):
+    _, mapping = sortVariables(X, Y, informativeVector)
 
-        if verbose == 1:
-            stdout = 'Running OPS ' + str(int((NVL_OPS / maxVL_OPS) * 100)) + '%/' + str(int((maxVL_OPS / maxVL_OPS) * 100)) + '%'
-            print(stdout)
+    for NV in range(1, maxVariables + 1):
+        subset = mapping[0:NV]
+        for NVL_Model in range(1, maxVL_Model + 1):
 
-        iterResults = np.empty([0, 5])
-        iterSelFeats = {}
+            if NV < NVL_Model:
+                continue
+            q2, _, _, _, _, _ = cv.plsLOO(X[:, subset], Y, NVL_Model)
 
+            metrics = np.array([q2, NV, NVL_Model, NVL_OPS, key_features])
+            iterSelFeats[key_features] = subset
+            key_features = key_features + 1
+            iterResults = np.vstack((iterResults, metrics))
 
-        if infoVec == 'corr':
-            corrVec = correlationVector(X, Y)
-            informativeVector = formatInfoVec(corrVec, nFeatures)
-        elif infoVec == 'reg':
-            regVec = regressionVector(X, Y, NVL_OPS)
-            informativeVector = formatInfoVec(regVec, nFeatures)
-        else:
-            corrVec = correlationVector(X, Y)
-            regVec = regressionVector(X, Y, NVL_OPS)
-            prodVec = regVec * corrVec
-            informativeVector = formatInfoVec(prodVec, nFeatures)
-
-        _, mapping = sortVariables(X, Y, informativeVector)
-
-        for NV in range(1, maxVariables + 1):
-            subset = mapping[0:NV]
-            for NVL_Model in range(1, maxVL_Model + 1):
-
-                if NV < NVL_Model:
-                    continue
-                q2, _, _, _, _, _ = cv.plsLOO(X[:, subset], Y, NVL_Model)
-
-                metrics = np.array([q2, NV, NVL_Model, NVL_OPS, key_features])
-                iterSelFeats[key_features] = subset
-                key_features = key_features + 1
-                iterResults = np.vstack((iterResults, metrics))
-
-        bestModelIndex = np.argmax(iterResults[:, 0])
-        bestModel = iterResults[bestModelIndex, :]
-        if verbose == 1:
-            print('Iteration\'s best model:', 'Q2:', '{0:.4f}'.format(bestModel[0]), 'NV:', int(bestModel[1]), 'NVL_Model:', int(bestModel[2]), 'NVL_OPS:', int(bestModel[3]))
-        results = np.vstack((results, bestModel))
-        selFeats[bestModel[4]] = iterSelFeats[bestModel[4]]
+    bestModelIndex = np.argmax(iterResults[:, 0])
+    bestModel = iterResults[bestModelIndex, :]
+   
+    if verbose == 1:
+        print('Iteration\'s best model:', 'Q2:', '{0:.4f}'.format(bestModel[0]), 'NV:', int(bestModel[1]), 'NVL_Model:', int(bestModel[2]), 'NVL_OPS:', int(bestModel[3]))
+    results = np.vstack((results, bestModel))
+    selFeats[bestModel[4]] = iterSelFeats[bestModel[4]]
 
     maxPerf = np.argmax(results[:, 0])
     q2 = results[maxPerf, 0]
@@ -182,12 +173,11 @@ def OPS(X, Y, maxVL_OPS, maxVL_Model, maxVariables, infoVec='prod', verbose=0):
     NVL_Model = results[maxPerf, 2]
     NVL_OPS = results[maxPerf, 3]
     subset = selFeats[results[maxPerf, 4]]
-    if verbose == 1:
-        print('Best model found:', 'Q2:', '{0:.4f}'.format(q2), 'NV:', int(NV), 'NVL_Model:', int(NVL_Model), 'NVL_OPS:', int(NVL_OPS))
+    
     return subset, q2, NV, NVL_Model, NVL_OPS
 
 
-def OPS_auto(X, Y, maxVL_OPS, maxVL_Model, maxVariables, verbose=0):
+def OPS_auto(X, Y, NVL_OPS, maxVL_Model, maxVariables, verbose=0):
     """
     Automated version of Ordered Predictors Selection (OPS): 
     feature selection algorithm for multivariate regression. For details about OPS, please see reference [1].
@@ -201,7 +191,7 @@ def OPS_auto(X, Y, maxVL_OPS, maxVL_Model, maxVariables, verbose=0):
         Samples.
     Y : numpy array of shape [n_samples]
         Target values.
-    maxVL_OPS: integer
+    NVL_OPS: integer
         Maximum number of latent variables tested in OPS for sorting varables (when using 'prod' or 'reg' infoVec).
     maxVL_Model: integer
         Maximum number of latent variables tested in PLS models with each feature subset.
@@ -255,77 +245,71 @@ def OPS_auto(X, Y, maxVL_OPS, maxVL_Model, maxVariables, verbose=0):
     selFeats = {}
     key_features = 1
 
-    for NVL_OPS in range(1, maxVL_OPS + 1):
+    iterResults = np.empty([0, 6])
+    iterSelFeats = {}
 
-        if verbose == 1:
-            stdout = 'Running OPS ' + str(int((NVL_OPS / maxVL_OPS) * 100)) + '%/' + str(int((maxVL_OPS / maxVL_OPS) * 100)) + '%'
-            print(stdout)
+    regVec = regressionVector(X, Y, NVL_OPS)
+    corrVec = correlationVector(X, Y)
+    prodVec = regVec * corrVec
 
-        iterResults = np.empty([0, 6])
-        iterSelFeats = {}
+    # Begin testing with correlation vetor
+    informativeVector = formatInfoVec(corrVec, nFeatures)
+    _, mapping = sortVariables(X, Y, informativeVector)
+    for NV in range(1, maxVariables + 1):
+        subset = mapping[0:NV]
+        for NVL_Model in range(1, maxVL_Model + 1):
 
-        regVec = regressionVector(X, Y, NVL_OPS)
-        corrVec = correlationVector(X, Y)
-        prodVec = regVec * corrVec
+            if NV < NVL_Model:
+                continue
+            q2, _, _, _, _, _ = cv.plsLOO(X[:, subset], Y, NVL_Model)
 
-        # Begin testing with correlation vetor
-        informativeVector = formatInfoVec(corrVec, nFeatures)
-        _, mapping = sortVariables(X, Y, informativeVector)
-        for NV in range(1, maxVariables + 1):
-            subset = mapping[0:NV]
-            for NVL_Model in range(1, maxVL_Model + 1):
+            metrics = np.array([q2, NV, NVL_Model, NVL_OPS, key_features, 1])
+            iterSelFeats[key_features] = subset
+            key_features = key_features + 1
+            iterResults = np.vstack((iterResults, metrics))
+    # End testing with correlation vetor
 
-                if NV < NVL_Model:
-                    continue
-                q2, _, _, _, _, _ = cv.plsLOO(X[:, subset], Y, NVL_Model)
+    # Begin testing with regression vetor
+    informativeVector = formatInfoVec(regVec, nFeatures)
+    _, mapping = sortVariables(X, Y, informativeVector)
+    for NV in range(1, maxVariables + 1):
+        subset = mapping[0:NV]
+        for NVL_Model in range(1, maxVL_Model + 1):
 
-                metrics = np.array([q2, NV, NVL_Model, NVL_OPS, key_features, 1])
-                iterSelFeats[key_features] = subset
-                key_features = key_features + 1
-                iterResults = np.vstack((iterResults, metrics))
-        # End testing with correlation vetor
+            if NV < NVL_Model:
+                continue
+            q2, _, _, _, _, _ = cv.plsLOO(X[:, subset], Y, NVL_Model)
 
-        # Begin testing with regression vetor
-        informativeVector = formatInfoVec(regVec, nFeatures)
-        _, mapping = sortVariables(X, Y, informativeVector)
-        for NV in range(1, maxVariables + 1):
-            subset = mapping[0:NV]
-            for NVL_Model in range(1, maxVL_Model + 1):
+            metrics = np.array([q2, NV, NVL_Model, NVL_OPS, key_features, 2])
+            iterSelFeats[key_features] = subset
+            key_features = key_features + 1
+            iterResults = np.vstack((iterResults, metrics))
+    # End testing with regression vetor
 
-                if NV < NVL_Model:
-                    continue
-                q2, _, _, _, _, _ = cv.plsLOO(X[:, subset], Y, NVL_Model)
+    # Begin testing with product vetor
+    informativeVector = formatInfoVec(prodVec, nFeatures)
+    _, mapping = sortVariables(X, Y, informativeVector)
+    for NV in range(1, maxVariables + 1):
+        subset = mapping[0:NV]
+        for NVL_Model in range(1, maxVL_Model + 1):
 
-                metrics = np.array([q2, NV, NVL_Model, NVL_OPS, key_features, 2])
-                iterSelFeats[key_features] = subset
-                key_features = key_features + 1
-                iterResults = np.vstack((iterResults, metrics))
-        # End testing with regression vetor
+            if NV < NVL_Model:
+                continue
+            q2, _, _, _, _, _ = cv.plsLOO(X[:, subset], Y, NVL_Model)
 
-        # Begin testing with product vetor
-        informativeVector = formatInfoVec(prodVec, nFeatures)
-        _, mapping = sortVariables(X, Y, informativeVector)
-        for NV in range(1, maxVariables + 1):
-            subset = mapping[0:NV]
-            for NVL_Model in range(1, maxVL_Model + 1):
+            metrics = np.array([q2, NV, NVL_Model, NVL_OPS, key_features, 3])
+            iterSelFeats[key_features] = subset
+            key_features = key_features + 1
+            iterResults = np.vstack((iterResults, metrics))
+    # End testing with product vetor
 
-                if NV < NVL_Model:
-                    continue
-                q2, _, _, _, _, _ = cv.plsLOO(X[:, subset], Y, NVL_Model)
-
-                metrics = np.array(
-                    [q2, NV, NVL_Model, NVL_OPS, key_features, 3])
-                iterSelFeats[key_features] = subset
-                key_features = key_features + 1
-                iterResults = np.vstack((iterResults, metrics))
-        # End testing with product vetor
-
-        bestModelIndex = np.argmax(iterResults[:, 0])
-        bestModel = iterResults[bestModelIndex, :]
-        if verbose == 1:
-            print('Iteration\'s best model:', 'Q2:', '{0:.4f}'.format(bestModel[0]), 'NV:', int(bestModel[1]), 'NVL_Model:', int(bestModel[2]), 'NVL_OPS:', int(bestModel[3]), 'InfoVec', int(bestModel[5]))
-        results = np.vstack((results, bestModel))
-        selFeats[bestModel[4]] = iterSelFeats[bestModel[4]]
+    bestModelIndex = np.argmax(iterResults[:, 0])
+    bestModel = iterResults[bestModelIndex, :]
+    
+    if verbose == 1:
+        print('Iteration\'s best model:', 'Q2:', '{0:.4f}'.format(bestModel[0]), 'NV:', int(bestModel[1]), 'NVL_Model:', int(bestModel[2]), 'NVL_OPS:', int(bestModel[3]), 'InfoVec', int(bestModel[5]))
+    results = np.vstack((results, bestModel))
+    selFeats[bestModel[4]] = iterSelFeats[bestModel[4]]
 
     maxPerf = np.argmax(results[:, 0])
     q2 = results[maxPerf, 0]
@@ -334,6 +318,5 @@ def OPS_auto(X, Y, maxVL_OPS, maxVL_Model, maxVariables, verbose=0):
     NVL_OPS = results[maxPerf, 3]
     infoVec = results[maxPerf, 5]
     subset = selFeats[results[maxPerf, 4]]
-    if verbose == 1:
-        print('Best model found:', 'Q2:', '{0:.4f}'.format(q2), 'NV:', int(NV), 'NVL_Model:', int(NVL_Model), 'NVL_OPS:', int(NVL_OPS), 'InfoVec', int(infoVec))
+
     return subset, q2, NV, NVL_Model, NVL_OPS, infoVec
